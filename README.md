@@ -18,28 +18,29 @@ You don't need to know TypeScript or install it separately.
 ## Setup
 
 ```bash
-cd bare-loop
 npm install
 cp .env.example .env    # put your ANTHROPIC_API_KEY in .env
 npm run playground      # starts the agent; for now it only prints a TODO
 ```
 
-Then open Claude Code in `bare-loop/`. You'll paste each step's prompt there.
+Then open Claude Code in this folder (the repo root). You'll paste each step's prompt there.
 
 ## What's in the starter
 
 | Path | What it is |
 |---|---|
-| `bare-loop/src/agent.ts` | Skeleton of the `Agent` class, with TODOs. This is where most of the work happens. |
-| `bare-loop/src/main.ts` | Wires everything together and starts the agent. |
-| `bare-loop/src/input.ts` | Reads input from the terminal. |
-| `bare-loop/src/tools/types.ts` | The shape of a tool: `name`, `description`, `inputSchema`, `fn`. |
-| `bare-loop/src/tools/read-file.ts` | A finished tool, as an example. |
-| `bare-loop/src/tools/truncate.ts` | Shortens text that's too long. |
-| `playground/` | A small project to test your agent on. |
+| `src/agent.ts` | Skeleton of the `Agent` class, with TODOs. This is where most of the work happens. |
+| `src/main.ts` | Wires everything together and starts the agent. |
+| `src/input.ts` | Reads input from the terminal. |
+| `src/tools/types.ts` | The shape of a tool: `name`, `description`, `inputSchema`, `fn`. |
+| `src/tools/read-file.ts` | A finished tool, as an example. |
+| `src/tools/truncate.ts` | Shortens text that's too long. |
+| `playground/` | A small project (`math.js` and its tests) for your agent to work on. |
 | `todo-api/TASK.md` | The spec for the finale. |
 
 `npm run playground` runs your agent inside `playground/`. Add `-- --debug` to see everything sent to and from the model.
+
+The agent only works inside the folder it was started in. That's why it runs in `playground/` and not here: it can't change its own code or read your `.env`.
 
 **How each step works:**
 1. Paste the prompt into Claude Code.
@@ -253,7 +254,7 @@ The tools need extra info for this (the agent's folder and which files were read
 ```
 
 **Check:**
-- "Read ../bare-loop/.env". It refuses.
+- "Read ../.env". It refuses.
 - "Change Hello in hello.txt to Hey." It still works: Claude reads the file first, then edits it.
 
 **Question:** why find & replace instead of rewriting the whole file? What would happen without read-before-edit?
@@ -275,7 +276,7 @@ Send back to Claude whether the command succeeded (the exit code) and what it pr
 A failing command, like failing tests, is a normal result, not a tool error.
 ```
 
-**Check:** break `multiply` in `playground/src/math.js` (make it return `a + b`), then ask "Run the tests and fix what fails." The agent runs the tests, fixes the code and runs them again until they pass.
+**Check:** break `multiply` in `playground/math.js` (make it return `a + b`), then ask "Run the tests and fix what fails." The agent runs the tests, fixes the code and runs them again until they pass.
 
 **Question:** why aren't failing tests (exit 1) a tool error? What does `[y/N]` protect against, and what doesn't it?
 
@@ -346,8 +347,7 @@ Killing the group matters because the command runs through a shell, so the `pid`
 `todo-api/` contains only `TASK.md`, the spec for a todo REST API. Start your agent in that folder:
 
 ```bash
-cd todo-api
-../bare-loop/node_modules/.bin/tsx --env-file=../bare-loop/.env ../bare-loop/src/main.ts
+npm run todo
 ```
 
 Tell it:
@@ -360,9 +360,13 @@ There will be many `[y/N]` questions. Read them before pressing `y`.
 
 **Done when:**
 - `npm install`, `npm run build` and `npm test` pass.
-- You start the server yourself with `npm run dev`, then try it:
+- You start the server yourself, then try it:
 
 ```bash
+cd todo-api
+npm run dev
+
+# in another terminal:
 curl -X POST localhost:3007/todos -H 'Content-Type: application/json' -d '{"text":"buy milk"}'
 curl localhost:3007/todos
 ```

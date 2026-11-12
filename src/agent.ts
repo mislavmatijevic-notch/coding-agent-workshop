@@ -26,5 +26,5 @@ export class Agent {
 
   // TODO (E): runUntilDone(conversation): loop model ↔ tools until the model is done
 
-  // TODO (I): runTask(task): one task without the user, for subagents
+  // TODO (H): runTask(task): one task without the user, for subagents
 }

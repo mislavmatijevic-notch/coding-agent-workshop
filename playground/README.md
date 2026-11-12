@@ -2,6 +2,6 @@
 
 A small test project for the coding agent.
 
-- `src/`: code
-- `test/`: tests (node:test)
-- `npm test`: runs all tests
+- `math.js`: code
+- `math.test.js`: tests (node:test)
+- `npm test`: runs the tests

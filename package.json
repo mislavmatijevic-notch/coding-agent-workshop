@@ -1,11 +1,11 @@
 {
-  "name": "bare-loop",
+  "name": "coding-agent-workshop",
   "version": "1.0.0",
   "scripts": {
-    "start": "tsx --env-file=.env src/main.ts",
+    "playground": "cd playground && tsx --env-file=../.env ../src/main.ts",
+    "todo": "cd todo-api && tsx --env-file=../.env ../src/main.ts",
     "typecheck": "tsc --noEmit",
-    "format": "prettier --write .",
-    "playground": "cd ../playground && tsx --env-file=../bare-loop/.env ../bare-loop/src/main.ts"
+    "format": "prettier --write src"
   },
   "keywords": [],
   "author": "",
