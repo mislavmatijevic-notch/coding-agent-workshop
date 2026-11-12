@@ -69,11 +69,6 @@ If I start the program with --debug, also print the full request and the full re
 
 **Question:** what does the API return in `content`, and why is it a list instead of a string?
 
-<details><summary>Answer</summary>
-
-A list of **blocks**, each with its own `type`: `text` or `tool_use` (a request to call a tool). It's a list because in one reply the model can both write text and ask for one or more tools.
-</details>
-
 ### B. Chat with memory
 
 **Goal:** a chat that remembers what was said earlier.
@@ -87,11 +82,6 @@ Save every message (mine and Claude's) in a conversation array, and send the who
 **Check:** type "My name is Ana", then "What's my name?". The agent answers "Ana".
 
 **Question:** where is the agent's memory, and why do we send the whole conversation every time?
-
-<details><summary>Answer</summary>
-
-The memory is the `conversation` array in our code. The model remembers nothing, because every API call is independent. If we don't send the previous messages, it doesn't know they happened.
-</details>
 
 ### C. The model asks for a tool
 
@@ -108,11 +98,6 @@ Keep it simple: it's OK if the chat breaks after a tool request, we fix that in 
 **Check:** "What's in package.json?" You see the agent ask for `read_file` with `{"path":"package.json"}`.
 
 **Question:** what does the model know about a tool, and what doesn't it see? Can the model read the file by itself?
-
-<details><summary>Answer</summary>
-
-It only knows `name`, `description` and `inputSchema`. It never sees the tool's code (`fn`). It can't read the file itself: it can only ask with `tool_use`, and our code does the reading.
-</details>
 
 ### D. Run the tool (one round)
 
@@ -132,17 +117,7 @@ If the tool fails or doesn't exist, send the error back to Claude instead of cra
 
 **Question:** why does `tool_result` go under `role: "user"`, and what is `tool_use_id` for?
 
-<details><summary>Answer</summary>
-
-The API only has two roles: `assistant` is the model, and `user` is everything else, including results returned by our code. `tool_use_id` links a result to its call, so the model knows which result belongs to which tool when it asks for several at once.
-</details>
-
 **Question:** why is it better to send a tool error back to the model than to crash?
-
-<details><summary>Answer</summary>
-
-The model can fix it: look at which files exist, correct the path, try something else. A crash loses the whole conversation and all the work. Tool errors are a normal part of the job, not an exception.
-</details>
 
 ### E. The loop
 
@@ -158,11 +133,6 @@ run() should just add my message and call runUntilDone().
 
 **Question:** who decides when the agent is done?
 
-<details><summary>Answer</summary>
-
-The model. When it replies without any `tool_use` block, the loop stops. Our code can only force it to stop (see step G).
-</details>
-
 ### F. Your first tool: `list_files`
 
 **Goal:** write a tool yourself.
@@ -176,11 +146,6 @@ Add it to the agent's tools in main.ts, next to read_file.
 **Check:** "What files are in this project?" The agent calls `list_files` and answers correctly.
 
 **Question:** why is a tool's `description` so important?
-
-<details><summary>Answer</summary>
-
-It's the only thing the model uses to decide **when** and **how** to use the tool. A bad description means the model doesn't use the tool when it should, uses it wrong, or wastes turns on errors.
-</details>
 
 ### G. Brakes
 
@@ -196,11 +161,6 @@ Add two limits so the agent can't run forever or cost too much.
 
 **Question:** what could happen without this limit?
 
-<details><summary>Answer</summary>
-
-The agent could get stuck in an endless loop, e.g. keep trying to fix a test it can't fix. Every turn sends the whole conversation, so the cost grows fast and the program never finishes.
-</details>
-
 ### H. One class, many agents
 
 **Goal:** the same class can be different agents.
@@ -215,11 +175,6 @@ In main.ts, call the agent "main" and give it a short system prompt.
 **Check:** change the system prompt (e.g. "Only answer in rhyme") and remove a tool. The agent behaves differently.
 
 **Question:** what's the difference between `run()` and `runTask()`?
-
-<details><summary>Answer</summary>
-
-`run()` is a chat with the user: it reads input from the terminal and the conversation lasts the whole session. `runTask()` gets **one** task as an argument, starts with an empty conversation, works without the user and **returns** the final text. That's why subagents use it.
-</details>
 
 ---
 
@@ -259,11 +214,6 @@ The tools need extra info for this (the agent's folder and which files were read
 
 **Question:** why find & replace instead of rewriting the whole file? What would happen without read-before-edit?
 
-<details><summary>Answer</summary>
-
-The model reproduces a small piece of text exactly, but when rewriting a large file it easily loses or changes something. It also uses far fewer output tokens. Without read-before-edit, the model would guess `old_str` instead of knowing it, and could overwrite changes made after it last saw the file, e.g. your edits in the editor.
-</details>
-
 ### T2. `run_command` + confirmation
 
 **Goal:** the agent can run tests, but only with your permission.
@@ -279,11 +229,6 @@ A failing command, like failing tests, is a normal result, not a tool error.
 **Check:** break `multiply` in `playground/math.js` (make it return `a + b`), then ask "Run the tests and fix what fails." The agent runs the tests, fixes the code and runs them again until they pass.
 
 **Question:** why aren't failing tests (exit 1) a tool error? What does `[y/N]` protect against, and what doesn't it?
-
-<details><summary>Answer</summary>
-
-The tool did its job; the failing tests are **information** the model needs to fix the code. `[y/N]` stops the agent from running a dangerous command without you knowing. It doesn't protect you from yourself: if you press `y` without reading, the command runs. It also doesn't cover what a command does internally (`npm test` can run any code in the project), and commands have no path sandbox.
-</details>
 
 ### T3. Subagents
 
@@ -304,14 +249,6 @@ main.ts should start the main agent.
 
 **Question:** why doesn't a subagent see the conversation with the user, and why is that good?
 
-<details><summary>Answer</summary>
-
-Because `runTask` starts with an empty conversation. That's good because:
-- The subagent gets only what it needs: a long conversation doesn't confuse it or waste tokens.
-- Main gets back only a summary, so its context stays clean.
-- Main has to write a clear, complete task.
-</details>
-
 ### T4. Background processes
 
 **Goal:** the agent can start a server, test it and stop it.
@@ -330,13 +267,6 @@ Also update the delegate_implement description, so main knows the implementer ca
 **Check:** "Create server.js that responds ok on port 3017, start it, check it with curl and stop it." The log shows `start_process` → `run_command curl` → `stop_process`. After you quit the agent, `lsof -i :3017` returns nothing.
 
 **Question:** why can't everything go through `run_command`? Why kill the whole process group instead of just the `pid`?
-
-<details><summary>Answer</summary>
-
-`run_command` only returns when the command finishes, and a server never finishes, so the agent would hang until the timeout and the server would be killed. The model has to start the process, do something else (e.g. `curl`) and come back to its output.
-
-Killing the group matters because the command runs through a shell, so the `pid` is the shell and the real server (e.g. `node` from `npm run dev`) is its child. Killing only the shell would leave the server running and holding the port.
-</details>
 
 ---
 
