@@ -47,8 +47,11 @@ The agent only works inside the folder it was started in. That's why it runs in 
 2. Read what it wrote.
 3. Run the check.
 4. Answer the question.
+5. Commit, so you have a save point: `git add -A && git commit -m "Step A"`
 
 Your code doesn't have to look exactly like anyone else's. If the check passes, move on.
+
+If Claude breaks something in a step, go back to your last commit with `git reset --hard && git clean -fd` and try the step again. Commits stay on your laptop; nothing is pushed anywhere.
 
 ---
 
