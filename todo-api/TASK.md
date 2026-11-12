@@ -4,9 +4,7 @@ Build a small REST API for a todo list in this folder, in TypeScript with Expres
 
 ## Packages
 
-- Check the latest versions of `express` and `supertest` on the npm registry:
-  - https://registry.npmjs.org/express/latest
-  - https://registry.npmjs.org/supertest/latest
+- Use the latest versions of all packages.
 - `dependencies`: `express`
 - `devDependencies`: `typescript`, `@types/express`, `@types/node`, `supertest`, `@types/supertest`
 
