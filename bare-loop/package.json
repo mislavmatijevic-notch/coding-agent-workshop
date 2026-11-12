@@ -1,0 +1,25 @@
+{
+  "name": "bare-loop",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "tsx --env-file=.env src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "playground": "cd ../playground && tsx --env-file=../bare-loop/.env ../bare-loop/src/main.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "type": "module",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0",
+    "chalk": "^6.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "prettier": "^3.9.10",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
