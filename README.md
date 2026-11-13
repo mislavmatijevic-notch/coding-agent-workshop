@@ -32,9 +32,8 @@ Then open Claude Code in this folder (the repo root). You'll paste each step's p
 | `src/agent.ts` | Skeleton of the `Agent` class, with TODOs. This is where most of the work happens. |
 | `src/main.ts` | Wires everything together and starts the agent. |
 | `src/input.ts` | Reads input from the terminal. |
-| `src/tools/types.ts` | The shape of a tool: `name`, `description`, `inputSchema`, `fn`. |
-| `src/tools/read-file.ts` | A finished tool, as an example. |
-| `src/tools/truncate.ts` | Shortens text that's too long. |
+| `src/tools/` | Your tools go here. You write the first one in step C. |
+| `src/tools/truncate.ts` | A helper that shortens text that's too long. |
 | `playground/` | A small project (`math.js` and its tests) for your agent to work on. |
 | `todo-api/TASK.md` | The spec for the finale. |
 
@@ -88,11 +87,13 @@ Save every message (mine and Claude's) in a conversation array, and send the who
 
 ### C. The model asks for a tool
 
-**Goal:** tell the model which tools exist, and see it ask for one.
+**Goal:** write your first tool, tell the model it exists, and see the model ask for it.
 
 ```text
 Give the agent its first tool.
-Add a tools list to the agent's options, and give it the read_file tool from src/tools.
+In src/tools/types.ts, create a ToolDefinition type: a tool has a name, a description, an input schema (for Claude) and an fn function (that our code runs).
+Then write a read_file tool in src/tools/read-file.ts that reads a file by its path. Keep it simple: just read the file and return its contents. Safety rules come later.
+Add a tools list to the agent's options and give it read_file.
 Send the tools to Claude with every request (name, description and input schema).
 Don't run any tools yet. When Claude asks for a tool, just print the tool name and its input.
 Keep it simple: it's OK if the chat breaks after a tool request, we fix that in the next step.
@@ -100,7 +101,7 @@ Keep it simple: it's OK if the chat breaks after a tool request, we fix that in 
 
 **Check:** "What's in package.json?" You see the agent ask for `read_file` with `{"path":"package.json"}`.
 
-**Question:** what does the model know about a tool, and what doesn't it see? Can the model read the file by itself?
+**Question:** which fields of `ToolDefinition` go to the model, and which one never leaves our code? Can the model read the file by itself?
 
 ### D. Run the tool (one round)
 
@@ -136,9 +137,9 @@ run() should just add my message and call runUntilDone().
 
 **Question:** who decides when the agent is done?
 
-### F. Your first tool: `list_files`
+### F. A second tool: `list_files`
 
-**Goal:** write a tool yourself.
+**Goal:** add another tool, so the model can find files on its own.
 
 ```text
 Write a new tool, list_files, so Claude can see which files exist.
