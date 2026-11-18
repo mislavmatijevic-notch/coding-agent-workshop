@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import chalk from "chalk";
 import { Agent } from "./agent.js";
 import { createUserInput } from "./input.js";
+import { editFileTool } from "./tools/edit-file.js";
 import { listFilesTool } from "./tools/list-files.js";
 import { readFileTool } from "./tools/read-file.js";
 import { UsageTracker } from "./usage.js";
@@ -20,7 +21,7 @@ const agent = new Agent({
     "Use your tools to look at the files before answering. Keep answers short and concrete.",
   client,
   getUserMessage: input.getUserMessage,
-  tools: [readFileTool, listFilesTool],
+  tools: [readFileTool, listFilesTool, editFileTool],
   workspaceRoot,
   debug,
   usage,

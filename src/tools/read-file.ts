@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import type { ToolDefinition } from "./types.js";
+import { recordRead, resolveInWorkspace } from "./workspace.js";
 
 export const readFileTool: ToolDefinition = {
   name: "read_file",
@@ -15,7 +16,10 @@ export const readFileTool: ToolDefinition = {
     },
     required: ["path"],
   },
-  fn: async (input: { path: string }) => {
-    return await readFile(input.path, "utf8");
+  fn: async (input: { path: string }, context) => {
+    const path = await resolveInWorkspace(context, input.path);
+    const content = await readFile(path, "utf8");
+    recordRead(context, path, content);
+    return content;
   },
 };

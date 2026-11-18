@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import chalk from "chalk";
 import type { GetUserMessage } from "./input.js";
-import type { ToolDefinition } from "./tools/types.js";
+import type { ToolContext, ToolDefinition } from "./tools/types.js";
 import type { UsageTracker } from "./usage.js";
 
 export type AgentOptions = {
@@ -21,7 +21,13 @@ export type AgentOptions = {
 };
 
 export class Agent {
-  constructor(private readonly options: AgentOptions) {}
+  // Passed to every tool call: the agent's folder and the files it has read.
+  // Each agent has its own, so one agent's reads don't let another edit.
+  private readonly toolContext: ToolContext;
+
+  constructor(private readonly options: AgentOptions) {
+    this.toolContext = { workspaceRoot: options.workspaceRoot, readFiles: new Map() };
+  }
 
   async run(): Promise<void> {
     // The agent's memory: every message so far, sent in full on each call,
@@ -170,7 +176,7 @@ export class Agent {
     }
 
     try {
-      const output = await tool.fn(block.input);
+      const output = await tool.fn(block.input, this.toolContext);
       return { type: "tool_result", tool_use_id: block.id, content: output };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);

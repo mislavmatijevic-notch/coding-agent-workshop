@@ -1,6 +1,7 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { ToolDefinition } from "./types.js";
+import { resolveInWorkspace } from "./workspace.js";
 
 // Folders that are big and never useful to look through.
 const SKIPPED = new Set(["node_modules", ".git"]);
@@ -37,9 +38,10 @@ export const listFilesTool: ToolDefinition = {
       },
     },
   },
-  fn: async (input: { path?: string }) => {
+  fn: async (input: { path?: string }, context) => {
+    const root = await resolveInWorkspace(context, input.path || ".");
     const out: string[] = [];
-    await listRecursive(input.path || ".", "", out);
+    await listRecursive(root, "", out);
     return out.join("\n");
   },
 };
