@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import chalk from "chalk";
 import type { GetUserMessage } from "./input.js";
 import type { ToolDefinition } from "./tools/types.js";
+import type { UsageTracker } from "./usage.js";
 
 export type AgentOptions = {
   client: Anthropic;
@@ -9,6 +10,9 @@ export type AgentOptions = {
   tools: ToolDefinition[];
   workspaceRoot: string;
   debug: boolean;
+  usage: UsageTracker;
+  // Most calls to Claude allowed while handling one user message.
+  maxTurns?: number;
 };
 
 export class Agent {
@@ -28,15 +32,36 @@ export class Agent {
 
       conversation.push({ role: "user", content: text });
       await this.runUntilDone(conversation);
+      console.log(chalk.gray(this.options.usage.format()));
+
+      // Out of token budget: end the session.
+      if (this.options.usage.isOverLimit()) break;
     }
   }
 
   // The agent loop: call Claude, run the tools it asks for, send the results
   // back, and repeat until Claude answers without asking for a tool.
   // Returns the text of that final reply.
+  // Stops early, returning a warning instead, if it hits maxTurns or the token
+  // budget, so a confused agent can't loop forever or run up a big bill.
   async runUntilDone(conversation: Anthropic.MessageParam[]): Promise<string> {
-    while (true) {
+    const maxTurns = this.options.maxTurns ?? 25;
+    const { usage } = this.options;
+
+    for (let turn = 0; ; turn++) {
+      if (usage.isOverLimit()) {
+        return this.warn(
+          `Stopped: token limit of ${usage.maxTokens.toLocaleString("en-US")} reached.`,
+        );
+      }
+      if (turn >= maxTurns) {
+        return this.warn(
+          `Stopped: reached the limit of ${maxTurns} calls to Claude for this message.`,
+        );
+      }
+
       const message = await this.runInference(conversation);
+      usage.add(message.usage);
       // Keep the full reply, tool_use blocks included: each tool_result we send
       // back must point at a tool_use id that's already in the conversation.
       conversation.push({ role: "assistant", content: message.content });
@@ -61,6 +86,12 @@ export class Agent {
 
       conversation.push({ role: "user", content: toolResults });
     }
+  }
+
+  // Print a warning in red and return it as plain text.
+  private warn(text: string): string {
+    console.log(chalk.red(text));
+    return text;
   }
 
   // The reply is a list of content blocks: text, or a request to use a tool.
