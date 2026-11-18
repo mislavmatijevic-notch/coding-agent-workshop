@@ -74,7 +74,7 @@ If I start the program with --debug, also print the full request and the full re
 
 **Check:** `npm run playground -- --debug`, then type `Hi`. You get a reply.
 
-**Question:** what does the API return in `content`, and why is it a list instead of a string?
+**Question:** Claude didn't return just text. What else do you see in the response?
 
 ### B. Chat with memory
 
