@@ -28,16 +28,35 @@ export class Agent {
 
       conversation.push({ role: "user", content: text });
       const message = await this.runInference(conversation);
+      // Keep the full reply, tool_use blocks included: each tool_result we send
+      // back must point at a tool_use id that's already in the conversation.
       conversation.push({ role: "assistant", content: message.content });
+      this.printMessage(message);
 
-      // The reply is a list of content blocks: text, or a request to use a tool.
+      // Run every tool Claude asked for and send all the results back in one
+      // user message. Only one round for now; step E turns this into a loop.
+      const toolResults: Anthropic.ToolResultBlockParam[] = [];
       for (const block of message.content) {
-        if (block.type === "text") {
-          console.log(`${chalk.yellow("Claude:")} ${block.text}`);
-        } else if (block.type === "tool_use") {
-          // We don't run tools yet (step D), just show what Claude asked for.
-          console.log(chalk.green(`tool: ${block.name}(${JSON.stringify(block.input)})`));
+        if (block.type === "tool_use") {
+          toolResults.push(await this.executeTool(block));
         }
+      }
+      if (toolResults.length === 0) continue;
+
+      conversation.push({ role: "user", content: toolResults });
+      const followUp = await this.runInference(conversation);
+      conversation.push({ role: "assistant", content: followUp.content });
+      this.printMessage(followUp);
+    }
+  }
+
+  // The reply is a list of content blocks: text, or a request to use a tool.
+  private printMessage(message: Anthropic.Message): void {
+    for (const block of message.content) {
+      if (block.type === "text") {
+        console.log(`${chalk.yellow("Claude:")} ${block.text}`);
+      } else if (block.type === "tool_use") {
+        console.log(chalk.green(`tool: ${block.name}(${JSON.stringify(block.input)})`));
       }
     }
   }
@@ -68,7 +87,34 @@ export class Agent {
     return response;
   }
 
-  // TODO (D): executeTool(block): run the tool the model asked for and return a tool_result
+  // Run the tool Claude asked for and wrap the output in a tool_result.
+  // Errors go back to Claude (is_error: true) instead of crashing the agent,
+  // so it can read what went wrong and try something else.
+  async executeTool(block: Anthropic.ToolUseBlock): Promise<Anthropic.ToolResultBlockParam> {
+    const tool = this.options.tools.find((t) => t.name === block.name);
+    if (!tool) {
+      return {
+        type: "tool_result",
+        tool_use_id: block.id,
+        content: `Unknown tool: ${block.name}`,
+        is_error: true,
+      };
+    }
+
+    try {
+      const output = await tool.fn(block.input);
+      return { type: "tool_result", tool_use_id: block.id, content: output };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      console.log(chalk.red(`tool error: ${errorMessage}`));
+      return {
+        type: "tool_result",
+        tool_use_id: block.id,
+        content: `Error: ${errorMessage}`,
+        is_error: true,
+      };
+    }
+  }
 
   // TODO (E): runUntilDone(conversation): loop model ↔ tools until the model is done
 
