@@ -3,6 +3,7 @@ import { Agent } from "./agent.js";
 import type { GetUserMessage } from "./input.js";
 import { editFileTool } from "./tools/edit-file.js";
 import { listFilesTool } from "./tools/list-files.js";
+import { readProcessOutputTool, startProcessTool, stopProcessTool } from "./tools/processes.js";
 import { readFileTool } from "./tools/read-file.js";
 import { runCommandTool } from "./tools/run-command.js";
 import type { ToolDefinition } from "./tools/types.js";
@@ -48,12 +49,24 @@ export function createImplementer(deps: AgentDeps): Agent {
       "not from a human, and you can't ask questions: work with what the task says. " +
       "Read files before editing them, make the change with edit_file, then run the tests with " +
       "run_command and fix problems until they pass. Follow the project's existing style. " +
+      "To test a server, never use run_command to start it (it waits for the command to finish, " +
+      "and a server never does). Instead: start it with start_process and check its output to " +
+      "see that it started, call it with curl using run_command (e.g. `curl -s -i " +
+      "http://localhost:3000/`), then stop it with stop_process. Always stop what you start. " +
       "The user approves every command; if they decline one, stop and report that. " +
       "When done, reply with a short summary: which files you changed, what you did, and the " +
       "final test result. Your reply is all the other agent will see.",
     client: deps.client,
     getUserMessage: deps.getUserMessage,
-    tools: [readFileTool, listFilesTool, editFileTool, runCommandTool],
+    tools: [
+      readFileTool,
+      listFilesTool,
+      editFileTool,
+      runCommandTool,
+      startProcessTool,
+      readProcessOutputTool,
+      stopProcessTool,
+    ],
     workspaceRoot: deps.workspaceRoot,
     debug: deps.debug,
     usage: deps.usage,
@@ -102,7 +115,9 @@ export function createMainAgent(deps: AgentDeps): Agent {
     "delegate_implement",
     "Start an implementer subagent that can read and edit files and run commands (the user " +
       "approves each command). It makes the change, runs the tests until they pass, and returns " +
-      "a summary of what it did.",
+      "a summary of what it did. It can also test a server: start it in the background, call " +
+      "it with curl, and stop it. Any process it starts is stopped when it finishes, so it " +
+      "can't leave a server running for you or the user.",
     () => createImplementer(deps),
   );
 

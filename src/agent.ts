@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import chalk from "chalk";
 import type { GetUserMessage } from "./input.js";
+import { ProcessManager } from "./tools/processes.js";
 import type { ToolContext, ToolDefinition } from "./tools/types.js";
 import type { UsageTracker } from "./usage.js";
 
@@ -30,6 +31,7 @@ export class Agent {
     this.toolContext = {
       workspaceRoot: options.workspaceRoot,
       readFiles: new Map(),
+      processes: new ProcessManager(),
       // Only agents that talk to the user can ask for permission.
       confirm: getUserMessage
         ? async (question) => {
@@ -53,17 +55,30 @@ export class Agent {
 
     this.log("Chat with Claude (Ctrl+D to quit)");
 
-    while (true) {
-      const [text, ok] = await getUserMessage(chalk.blue("You: "));
-      if (!ok) break; // Ctrl+D
-      if (text.trim() === "") continue;
+    try {
+      while (true) {
+        const [text, ok] = await getUserMessage(chalk.blue("You: "));
+        if (!ok) break; // Ctrl+D
+        if (text.trim() === "") continue;
 
-      conversation.push({ role: "user", content: text });
-      await this.runUntilDone(conversation);
-      this.log(chalk.gray(this.options.usage.format()));
+        conversation.push({ role: "user", content: text });
+        await this.runUntilDone(conversation);
+        this.log(chalk.gray(this.options.usage.format()));
 
-      // Out of token budget: end the session.
-      if (this.options.usage.isOverLimit()) break;
+        // Out of token budget: end the session.
+        if (this.options.usage.isOverLimit()) break;
+      }
+    } finally {
+      await this.stopProcesses();
+    }
+  }
+
+  // Stop every background process this agent started, so no server keeps
+  // running (and holding its port) after the agent is gone.
+  private async stopProcesses(): Promise<void> {
+    const stopped = await this.toolContext.processes.stopAll();
+    for (const proc of stopped) {
+      this.log(chalk.gray(`stopped background process ${proc.id}: ${proc.command}`));
     }
   }
 
@@ -119,9 +134,15 @@ export class Agent {
   // One task, no user: a fresh conversation that holds only the task.
   // The agent works until it's done (or hits a limit) and returns its final
   // answer. Subagents use this: they don't see the caller's conversation.
+  // When the task ends, the agent's background processes end with it: nobody
+  // else has their ids, so nobody could stop them later.
   async runTask(task: string): Promise<string> {
     const conversation: Anthropic.MessageParam[] = [{ role: "user", content: task }];
-    return this.runUntilDone(conversation);
+    try {
+      return await this.runUntilDone(conversation);
+    } finally {
+      await this.stopProcesses();
+    }
   }
 
   // Print text with the agent's name in front of every line, e.g. [main].

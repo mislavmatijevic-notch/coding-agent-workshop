@@ -53,7 +53,8 @@ export const runCommandTool: ToolDefinition = {
   description:
     "Run a shell command in the project folder, e.g. 'npm test' or 'node script.js', and get back " +
     "its exit code and output (stdout and stderr combined). The user must approve every command, " +
-    "and may decline. Commands are stopped after 30 seconds, so don't start servers or watchers. " +
+    "and may decline. Commands are stopped after 30 seconds, so don't start servers or watchers " +
+    "here: use start_process for those. " +
     "Commands can't read input, so pass flags that avoid interactive prompts. " +
     "A non-zero exit code (e.g. failing tests) is a normal result: read the output to see what failed.",
   inputSchema: {

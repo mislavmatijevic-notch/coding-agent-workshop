@@ -1,4 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import type { ProcessManager } from "./processes.js";
 
 // Extra info our code passes to every tool call. Claude never sees it.
 export type ToolContext = {
@@ -11,6 +12,9 @@ export type ToolContext = {
   // Ask the user a yes/no question; resolves true only if they say yes.
   // Missing for agents that never talk to the user (subagents): nobody can approve.
   confirm?: (question: string) => Promise<boolean>;
+  // Background processes (servers) this agent started with start_process.
+  // The agent stops them all when it finishes.
+  processes: ProcessManager;
 };
 
 // A tool the agent can use.
