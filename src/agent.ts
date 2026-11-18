@@ -27,6 +27,15 @@ export class Agent {
       if (text.trim() === "") continue;
 
       conversation.push({ role: "user", content: text });
+      await this.runUntilDone(conversation);
+    }
+  }
+
+  // The agent loop: call Claude, run the tools it asks for, send the results
+  // back, and repeat until Claude answers without asking for a tool.
+  // Returns the text of that final reply.
+  async runUntilDone(conversation: Anthropic.MessageParam[]): Promise<string> {
+    while (true) {
       const message = await this.runInference(conversation);
       // Keep the full reply, tool_use blocks included: each tool_result we send
       // back must point at a tool_use id that's already in the conversation.
@@ -34,19 +43,23 @@ export class Agent {
       this.printMessage(message);
 
       // Run every tool Claude asked for and send all the results back in one
-      // user message. Only one round for now; step E turns this into a loop.
+      // user message.
       const toolResults: Anthropic.ToolResultBlockParam[] = [];
       for (const block of message.content) {
         if (block.type === "tool_use") {
           toolResults.push(await this.executeTool(block));
         }
       }
-      if (toolResults.length === 0) continue;
+
+      // No tool requests means Claude is done: return its final text.
+      if (toolResults.length === 0) {
+        return message.content
+          .filter((block) => block.type === "text")
+          .map((block) => block.text)
+          .join("\n");
+      }
 
       conversation.push({ role: "user", content: toolResults });
-      const followUp = await this.runInference(conversation);
-      conversation.push({ role: "assistant", content: followUp.content });
-      this.printMessage(followUp);
     }
   }
 
@@ -115,8 +128,6 @@ export class Agent {
       };
     }
   }
-
-  // TODO (E): runUntilDone(conversation): loop model ↔ tools until the model is done
 
   // TODO (H): runTask(task): one task without the user, for subagents
 }
