@@ -297,9 +297,13 @@ Read TASK.md and implement everything in it.
 
 There will be many `[y/N]` questions. Read them before pressing `y`.
 
-**Done when:**
+If you skipped T4, switch to its branch first (`git switch --discard-changes step-t4 && git clean -fd`): the agent needs the background process tools to test the server.
+
+**Done when** the agent has done everything in TASK.md on its own:
 - `npm install`, `npm run build` and `npm test` pass.
-- You start the server yourself, then try it:
+- It started the server on port 3017, added a todo with `curl`, saw it in the list and stopped the server. In the log: `start_process` → `curl` → `curl` → `stop_process`.
+
+Want to try it yourself too?
 
 ```bash
 cd todo-api
@@ -309,5 +313,3 @@ npm run dev
 curl -X POST localhost:3007/todos -H 'Content-Type: application/json' -d '{"text":"buy milk"}'
 curl localhost:3007/todos
 ```
-
-**Bonus:** "Start the server on port 3017, try all routes with curl and stop it."

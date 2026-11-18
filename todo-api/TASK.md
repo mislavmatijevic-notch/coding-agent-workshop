@@ -56,5 +56,4 @@ Tests with `node:test` and `supertest` for all routes, including:
 1. `npm install` succeeds.
 2. `npm run build` succeeds with no TypeScript errors.
 3. `npm test` succeeds and all tests are green.
-
-**Do not run `npm run dev`.** I will start the server myself.
+4. The server really works: start it in the background on port 3017 (`PORT=3017 npm run dev`), add one todo with a `curl` POST, check with a `curl` GET that it's in the list, then stop the server.
