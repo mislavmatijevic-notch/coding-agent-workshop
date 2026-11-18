@@ -26,7 +26,22 @@ export class Agent {
   private readonly toolContext: ToolContext;
 
   constructor(private readonly options: AgentOptions) {
-    this.toolContext = { workspaceRoot: options.workspaceRoot, readFiles: new Map() };
+    const { getUserMessage } = options;
+    this.toolContext = {
+      workspaceRoot: options.workspaceRoot,
+      readFiles: new Map(),
+      // Only agents that talk to the user can ask for permission.
+      confirm: getUserMessage
+        ? async (question) => {
+            const prefix = chalk.cyan(`[${options.name}]`);
+            const [answer, ok] = await getUserMessage(
+              `${prefix} ${chalk.magenta(question)} [y/N] `,
+            );
+            // Anything but y/yes (including Enter or Ctrl+D) means no.
+            return ok && ["y", "yes"].includes(answer.trim().toLowerCase());
+          }
+        : undefined,
+    };
   }
 
   async run(): Promise<void> {

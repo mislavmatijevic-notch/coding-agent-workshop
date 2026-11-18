@@ -5,6 +5,7 @@ import { createUserInput } from "./input.js";
 import { editFileTool } from "./tools/edit-file.js";
 import { listFilesTool } from "./tools/list-files.js";
 import { readFileTool } from "./tools/read-file.js";
+import { runCommandTool } from "./tools/run-command.js";
 import { UsageTracker } from "./usage.js";
 
 const workspaceRoot = process.cwd();
@@ -21,7 +22,7 @@ const agent = new Agent({
     "Use your tools to look at the files before answering. Keep answers short and concrete.",
   client,
   getUserMessage: input.getUserMessage,
-  tools: [readFileTool, listFilesTool, editFileTool],
+  tools: [readFileTool, listFilesTool, editFileTool, runCommandTool],
   workspaceRoot,
   debug,
   usage,

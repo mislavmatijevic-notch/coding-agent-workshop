@@ -8,6 +8,9 @@ export type ToolContext = {
   // edit_file uses this to refuse edits to files Claude hasn't read, or that
   // changed since it read them.
   readFiles: Map<string, string>;
+  // Ask the user a yes/no question; resolves true only if they say yes.
+  // Missing for agents that never talk to the user (subagents): nobody can approve.
+  confirm?: (question: string) => Promise<boolean>;
 };
 
 // A tool the agent can use.
