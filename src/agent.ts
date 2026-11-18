@@ -12,14 +12,40 @@ export type AgentOptions = {
 export class Agent {
   constructor(private readonly options: AgentOptions) {}
 
-  // TODO (A, B): chat with the user: read input, send it to the model, print the reply
+  // TODO (B): turn this into a chat loop with memory
   async run(): Promise<void> {
-    console.log(chalk.red("TODO: implement run()"));
+    const [text, ok] = await this.options.getUserMessage(chalk.blue("You: "));
+    if (!ok || text.trim() === "") return;
+
+    const conversation: Anthropic.MessageParam[] = [{ role: "user", content: text }];
+    const message = await this.runInference(conversation);
+
+    // The reply is a list of content blocks; print the text ones.
+    for (const block of message.content) {
+      if (block.type === "text") {
+        console.log(`${chalk.yellow("Claude:")} ${block.text}`);
+      }
+    }
   }
 
-  // TODO (A): a single model call (client.messages.create)
   async runInference(conversation: Anthropic.MessageParam[]): Promise<Anthropic.Message> {
-    throw new Error("TODO: implement runInference()");
+    const request: Anthropic.MessageCreateParamsNonStreaming = {
+      model: "claude-haiku-5-5",
+      max_tokens: 4096,
+      messages: conversation,
+    };
+
+    if (this.options.debug) {
+      console.log(chalk.gray("--- request ---\n" + JSON.stringify(request, null, 2)));
+    }
+
+    const response = await this.options.client.messages.create(request);
+
+    if (this.options.debug) {
+      console.log(chalk.gray("--- response ---\n" + JSON.stringify(response, null, 2)));
+    }
+
+    return response;
   }
 
   // TODO (D): executeTool(block): run the tool the model asked for and return a tool_result
