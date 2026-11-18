@@ -12,18 +12,27 @@ export type AgentOptions = {
 export class Agent {
   constructor(private readonly options: AgentOptions) {}
 
-  // TODO (B): turn this into a chat loop with memory
   async run(): Promise<void> {
-    const [text, ok] = await this.options.getUserMessage(chalk.blue("You: "));
-    if (!ok || text.trim() === "") return;
+    // The agent's memory: every message so far, sent in full on each call,
+    // because the API is stateless and remembers nothing between requests.
+    const conversation: Anthropic.MessageParam[] = [];
 
-    const conversation: Anthropic.MessageParam[] = [{ role: "user", content: text }];
-    const message = await this.runInference(conversation);
+    console.log("Chat with Claude (Ctrl+D to quit)");
 
-    // The reply is a list of content blocks; print the text ones.
-    for (const block of message.content) {
-      if (block.type === "text") {
-        console.log(`${chalk.yellow("Claude:")} ${block.text}`);
+    while (true) {
+      const [text, ok] = await this.options.getUserMessage(chalk.blue("You: "));
+      if (!ok) break; // Ctrl+D
+      if (text.trim() === "") continue;
+
+      conversation.push({ role: "user", content: text });
+      const message = await this.runInference(conversation);
+      conversation.push({ role: "assistant", content: message.content });
+
+      // The reply is a list of content blocks; print the text ones.
+      for (const block of message.content) {
+        if (block.type === "text") {
+          console.log(`${chalk.yellow("Claude:")} ${block.text}`);
+        }
       }
     }
   }
