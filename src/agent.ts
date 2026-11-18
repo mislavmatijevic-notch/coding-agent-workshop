@@ -5,8 +5,13 @@ import type { ToolDefinition } from "./tools/types.js";
 import type { UsageTracker } from "./usage.js";
 
 export type AgentOptions = {
+  // Shown in front of every line this agent prints, e.g. [main].
+  name: string;
+  // Sent to Claude with every request: who this agent is and how it works.
+  systemPrompt: string;
   client: Anthropic;
-  getUserMessage: GetUserMessage;
+  // Only needed for run(). An agent that only does runTask() never talks to the user.
+  getUserMessage?: GetUserMessage;
   tools: ToolDefinition[];
   workspaceRoot: string;
   debug: boolean;
@@ -22,17 +27,19 @@ export class Agent {
     // The agent's memory: every message so far, sent in full on each call,
     // because the API is stateless and remembers nothing between requests.
     const conversation: Anthropic.MessageParam[] = [];
+    const { getUserMessage } = this.options;
+    if (!getUserMessage) throw new Error(`Agent ${this.options.name} has no getUserMessage`);
 
-    console.log("Chat with Claude (Ctrl+D to quit)");
+    this.log("Chat with Claude (Ctrl+D to quit)");
 
     while (true) {
-      const [text, ok] = await this.options.getUserMessage(chalk.blue("You: "));
+      const [text, ok] = await getUserMessage(chalk.blue("You: "));
       if (!ok) break; // Ctrl+D
       if (text.trim() === "") continue;
 
       conversation.push({ role: "user", content: text });
       await this.runUntilDone(conversation);
-      console.log(chalk.gray(this.options.usage.format()));
+      this.log(chalk.gray(this.options.usage.format()));
 
       // Out of token budget: end the session.
       if (this.options.usage.isOverLimit()) break;
@@ -88,9 +95,25 @@ export class Agent {
     }
   }
 
+  // One task, no user: a fresh conversation that holds only the task.
+  // The agent works until it's done (or hits a limit) and returns its final
+  // answer. Subagents use this: they don't see the caller's conversation.
+  async runTask(task: string): Promise<string> {
+    const conversation: Anthropic.MessageParam[] = [{ role: "user", content: task }];
+    return this.runUntilDone(conversation);
+  }
+
+  // Print text with the agent's name in front of every line, e.g. [main].
+  private log(text: string): void {
+    const prefix = chalk.cyan(`[${this.options.name}]`);
+    for (const line of text.split("\n")) {
+      console.log(`${prefix} ${line}`);
+    }
+  }
+
   // Print a warning in red and return it as plain text.
   private warn(text: string): string {
-    console.log(chalk.red(text));
+    this.log(chalk.red(text));
     return text;
   }
 
@@ -98,9 +121,9 @@ export class Agent {
   private printMessage(message: Anthropic.Message): void {
     for (const block of message.content) {
       if (block.type === "text") {
-        console.log(`${chalk.yellow("Claude:")} ${block.text}`);
+        this.log(`${chalk.yellow("Claude:")} ${block.text}`);
       } else if (block.type === "tool_use") {
-        console.log(chalk.green(`tool: ${block.name}(${JSON.stringify(block.input)})`));
+        this.log(chalk.green(`tool: ${block.name}(${JSON.stringify(block.input)})`));
       }
     }
   }
@@ -109,6 +132,7 @@ export class Agent {
     const request: Anthropic.MessageCreateParamsNonStreaming = {
       model: "claude-haiku-5-5",
       max_tokens: 4096,
+      system: this.options.systemPrompt,
       messages: conversation,
       // Claude only sees name, description and input schema; fn stays in our code.
       tools: this.options.tools.map((tool) => ({
@@ -119,13 +143,13 @@ export class Agent {
     };
 
     if (this.options.debug) {
-      console.log(chalk.gray("--- request ---\n" + JSON.stringify(request, null, 2)));
+      this.log(chalk.gray("--- request ---\n" + JSON.stringify(request, null, 2)));
     }
 
     const response = await this.options.client.messages.create(request);
 
     if (this.options.debug) {
-      console.log(chalk.gray("--- response ---\n" + JSON.stringify(response, null, 2)));
+      this.log(chalk.gray("--- response ---\n" + JSON.stringify(response, null, 2)));
     }
 
     return response;
@@ -150,7 +174,7 @@ export class Agent {
       return { type: "tool_result", tool_use_id: block.id, content: output };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);
-      console.log(chalk.red(`tool error: ${errorMessage}`));
+      this.log(chalk.red(`tool error: ${errorMessage}`));
       return {
         type: "tool_result",
         tool_use_id: block.id,
@@ -159,6 +183,4 @@ export class Agent {
       };
     }
   }
-
-  // TODO (H): runTask(task): one task without the user, for subagents
 }

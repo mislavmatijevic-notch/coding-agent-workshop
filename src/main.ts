@@ -14,6 +14,10 @@ const client = new Anthropic();
 const usage = new UsageTracker(1_000_000);
 const input = createUserInput();
 const agent = new Agent({
+  name: "main",
+  systemPrompt:
+    "You are a coding agent working in the user's project folder. " +
+    "Use your tools to look at the files before answering. Keep answers short and concrete.",
   client,
   getUserMessage: input.getUserMessage,
   tools: [readFileTool, listFilesTool],
