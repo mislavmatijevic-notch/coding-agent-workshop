@@ -1,10 +1,12 @@
 import Anthropic from "@anthropic-ai/sdk";
 import chalk from "chalk";
 import type { GetUserMessage } from "./input.js";
+import type { ToolDefinition } from "./tools/types.js";
 
 export type AgentOptions = {
   client: Anthropic;
   getUserMessage: GetUserMessage;
+  tools: ToolDefinition[];
   workspaceRoot: string;
   debug: boolean;
 };
@@ -28,10 +30,13 @@ export class Agent {
       const message = await this.runInference(conversation);
       conversation.push({ role: "assistant", content: message.content });
 
-      // The reply is a list of content blocks; print the text ones.
+      // The reply is a list of content blocks: text, or a request to use a tool.
       for (const block of message.content) {
         if (block.type === "text") {
           console.log(`${chalk.yellow("Claude:")} ${block.text}`);
+        } else if (block.type === "tool_use") {
+          // We don't run tools yet (step D), just show what Claude asked for.
+          console.log(chalk.green(`tool: ${block.name}(${JSON.stringify(block.input)})`));
         }
       }
     }
@@ -42,6 +47,12 @@ export class Agent {
       model: "claude-haiku-5-5",
       max_tokens: 4096,
       messages: conversation,
+      // Claude only sees name, description and input schema; fn stays in our code.
+      tools: this.options.tools.map((tool) => ({
+        name: tool.name,
+        description: tool.description,
+        input_schema: tool.inputSchema,
+      })),
     };
 
     if (this.options.debug) {
