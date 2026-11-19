@@ -162,8 +162,8 @@ Add it to the agent's tools in main.ts, next to read_file.
 
 ```text
 Add two limits so the agent can't run forever or cost too much.
-1. Claude can be called at most 25 times per message (make it a maxTurns option). If the limit is hit, stop, print a warning in red and return it as plain text.
-2. Count the tokens from every response in a small UsageTracker class in src/usage.ts. Stop when the total goes over 1,000,000. Show the token count after every answer and when the program exits.
+1. Claude can be called at most 25 times per message (make it a maxTurns option). If the limit is hit, stop and return a short warning as the answer.
+2. Count the tokens from every response in a small UsageTracker class in src/usage.ts. Stop when the total goes over 1,000,000. Print the token count after every answer.
 ```
 
 **Check:** temporarily set `maxTurns: 2` and ask "Read every file in the project one by one." The agent stops and says why. Set it back afterwards.
